@@ -220,7 +220,7 @@ def load_ts_all(
     dfs: dict[str, pd.DataFrame] = {}
     infos: dict[str, dict[str, Any]] = {}
     for spec in specs:
-        df, info = load_ts(prepared_path, spec.term)
+        df, info = load_ts(f"{prepared_path}/{spec.term}", spec.term)
         dfs[spec.key] = df
         infos[spec.key] = info
     return dfs, infos
