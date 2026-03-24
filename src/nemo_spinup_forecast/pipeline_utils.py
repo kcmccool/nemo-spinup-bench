@@ -11,8 +11,8 @@ from nemo_spinup_forecast.forecast import Predictions, Simulation, load_ts
 
 
 @dataclass(frozen=True)
-class TermSpec:
-    """Specification for one ocean term handled in the notebook pipeline.
+class TermDef:
+    """Minimal specification for one ocean term.
 
     Attributes
     ----------
@@ -22,6 +22,21 @@ class TermSpec:
         Ocean variable name consumed by loaders and forecasting classes.
     filename : str
         File name pattern used to select matching simulation files.
+    """
+
+    key: str
+    term: str
+    filename: str
+
+
+@dataclass(frozen=True)
+class TermSpec(TermDef):
+    """Specification for one ocean term handled in the notebook pipeline.
+
+    Extends :class:`TermDef` with axes used for notebook analysis.
+
+    Attributes
+    ----------
     mean_axes : tuple[int, ...]
         Axes used in notebook analysis to compute mean prediction/reference
         profiles.
@@ -30,15 +45,12 @@ class TermSpec:
         summary statistics.
     """
 
-    key: str
-    term: str
-    filename: str
     mean_axes: tuple[int, ...]
     err_axes: tuple[int, ...]
 
 
 def build_simulations(
-    specs: Sequence[TermSpec],
+    specs: Sequence[TermDef],
     *,
     data_path: str,
     start: int,
@@ -52,7 +64,7 @@ def build_simulations(
 
     Parameters
     ----------
-    specs : Sequence[TermSpec]
+    specs : Sequence[TermDef]
         Specifications defining each term to load and prepare.
     data_path : str
         Root path containing simulation files.
@@ -74,7 +86,7 @@ def build_simulations(
     Returns
     -------
     dict[str, Simulation]
-        Prepared simulation instances keyed by :attr:`TermSpec.key`.
+        Prepared simulation instances keyed by :attr:`TermDef.key`.
 
     Notes
     -----
@@ -120,7 +132,7 @@ def decompose_all(sims: Mapping[str, Simulation]) -> None:
 
 
 def compute_rmse_for_terms(
-    specs: Sequence[TermSpec],
+    specs: Sequence[TermDef],
     sims: Mapping[str, Simulation],
     n_components: int | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
@@ -128,10 +140,10 @@ def compute_rmse_for_terms(
 
     Parameters
     ----------
-    specs : Sequence[TermSpec]
+    specs : Sequence[TermDef]
         Term specifications defining the processing order and output keys.
     sims : Mapping[str, Simulation]
-        Prepared and decomposed simulations keyed by :attr:`TermSpec.key`.
+        Prepared and decomposed simulations keyed by :attr:`TermDef.key`.
     n_components : int or None, default=None
         Number of components to use for reconstruction.
         None uses all fitted components (``len(s.pca.components_)``).
@@ -140,7 +152,7 @@ def compute_rmse_for_terms(
     -------
     tuple[dict[str, Any], dict[str, Any], dict[str, Any]]
         Tuple ``(recs, rmseVs, rmseMs)`` where each dictionary is keyed by
-        :attr:`TermSpec.key`.
+        :attr:`TermDef.key`.
     """
     recs: dict[str, Any] = {}
     rmseVs: dict[str, Any] = {}
@@ -184,7 +196,7 @@ def make_dicos(sims: Mapping[str, Simulation]) -> dict[str, dict[str, Any]]:
 
 def load_ts_all(
     prepared_path: str,
-    specs: Sequence[TermSpec],
+    specs: Sequence[TermDef],
 ) -> tuple[dict[str, pd.DataFrame], dict[str, dict[str, Any]]]:
     """Load all prepared time-series DataFrames and metadata dictionaries.
 
@@ -192,13 +204,13 @@ def load_ts_all(
     ----------
     prepared_path : str
         Directory containing prepared ``.npz`` and PCA files.
-    specs : Sequence[TermSpec]
+    specs : Sequence[TermDef]
         Term specifications defining which prepared terms to load.
 
     Returns
     -------
     tuple[dict[str, pd.DataFrame], dict[str, dict[str, Any]]]
-        Tuple ``(dfs, infos)`` keyed by :attr:`TermSpec.key`.
+        Tuple ``(dfs, infos)`` keyed by :attr:`TermDef.key`.
 
     Notes
     -----
@@ -215,7 +227,7 @@ def load_ts_all(
 
 
 def build_predictions(
-    specs: Sequence[TermSpec],
+    specs: Sequence[TermDef],
     dfs: Mapping[str, pd.DataFrame],
     infos: Mapping[str, dict[str, Any]],
     forecast_method: Any,
@@ -225,12 +237,12 @@ def build_predictions(
 
     Parameters
     ----------
-    specs : Sequence[TermSpec]
+    specs : Sequence[TermDef]
         Term specifications defining output keys and forecasted variables.
     dfs : Mapping[str, pd.DataFrame]
-        Time-series component DataFrames keyed by :attr:`TermSpec.key`.
+        Time-series component DataFrames keyed by :attr:`TermDef.key`.
     infos : Mapping[str, dict[str, Any]]
-        Metadata dictionaries keyed by :attr:`TermSpec.key`.
+        Metadata dictionaries keyed by :attr:`TermDef.key`.
     forecast_method : Any
         Forecasting method instance passed to
         :class:`~nemo_spinup_forecast.forecast.Predictions`.
@@ -241,7 +253,7 @@ def build_predictions(
     Returns
     -------
     dict[str, Predictions]
-        Prediction objects keyed by :attr:`TermSpec.key`.
+        Prediction objects keyed by :attr:`TermDef.key`.
     """
     preds: dict[str, Predictions] = {}
     for spec in specs:
@@ -252,7 +264,7 @@ def build_predictions(
 
 
 def forecast_all(
-    specs: Sequence[TermSpec],
+    specs: Sequence[TermDef],
     preds: Mapping[str, Predictions],
     *,
     train_len: int,
@@ -262,10 +274,10 @@ def forecast_all(
 
     Parameters
     ----------
-    specs : Sequence[TermSpec]
+    specs : Sequence[TermDef]
         Term specifications defining processing order and output keys.
     preds : Mapping[str, Predictions]
-        Prediction objects keyed by :attr:`TermSpec.key`.
+        Prediction objects keyed by :attr:`TermDef.key`.
     train_len : int
         Number of initial rows used as the training window.
     steps : int
@@ -274,7 +286,7 @@ def forecast_all(
     Returns
     -------
     tuple[dict[str, pd.DataFrame], dict[str, Any], dict[str, Any]]
-        Tuple ``(hats, hat_stds, metrics)`` keyed by :attr:`TermSpec.key`.
+        Tuple ``(hats, hat_stds, metrics)`` keyed by :attr:`TermDef.key`.
         ``hats`` contains the raw forecast output (forecast period only).
     """
     hats: dict[str, pd.DataFrame] = {}
