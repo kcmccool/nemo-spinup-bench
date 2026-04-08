@@ -140,6 +140,10 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
 
    The forecast outputs predicted ocean state variables to `forecasts/simu_predicted/`.
 
+---
+
+### C. Create the updated restart file
+
 6. **Create the updated restart file**
 
    Using the forecasted ocean state from the previous step, `nemo-spinup-restart` injects the predicted variables (SSH, temperature, salinity, and derived velocities) into the original NEMO restart file. A new restart file is created with `NEW_` prepended to the filename, leaving the original intact and ready to initialise NEMO at the projected year.
@@ -156,14 +160,18 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
    - **`--radical`** is the prefix of the restart file (e.g. `DINO_00576000_restart`)
    - Output files are named as the originals but with `NEW` prepended
 
+---
+
+### D. (Optional) Evaluate against a reference simulation
+
 7. **Evaluate** the projected state and compare against the baseline:
 
-   This is the evaluation on the updated restart state compared to the reference at 80 years. We recommend outputting restart files fairly frequently to test different step settings. 
+   This step is optional and only applies if you have an offline reference simulation to compare against. It evaluates the updated restart state against the reference at 80 years. We recommend outputting restart files fairly frequently to test different step settings.
 
    ```bash
    nemo-spinup-evaluation \
      --sim-path ./data/DINO \
-     --ref-sim-path ./data/DINO/reference/ \  # optional: offline ground truth reference simulation
+     --ref-sim-path ./data/DINO/reference/ \  # offline ground truth reference simulation
      --config nemo-spinup-evaluation/configs/DINO-setup.yaml \
      --results-dir output \
      --result-file-prefix spinup_evaluation \
@@ -174,11 +182,11 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
 
    Results are written to `output/spinup_evaluation_restart.csv`. Compare these against the 80 year reference restart file output to understand how the ML forecast from the spin-up acceleration compares to the simulation.
 
-   > TODO: Does the DINO-setup.yaml need to modified here to point to the 80 year restart file. 
+   > TODO: Does the DINO-setup.yaml need to modified here to point to the 80 year restart file.
 
 ---
 
-### C. Running NEMO with the new state
+### E. Running NEMO with the new state
 
 1. **Copy the experiment directory** `EXP00` as a backup; the original will be overwritten in the next step.
 
