@@ -61,8 +61,12 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
 
    **Download data from Zenodo**
 
+   Download `50.zip` from [Zenodo record 19474414](https://zenodo.org/records/19474414), unzip it, and place the contents in `data/DINO/`. The record also provides `200.zip` (200 years of DINO output) and `restart.zip` (200 annual restart files) for extended experiments.
+
    ```bash
-   # TODO: add download instructions once Zenodo record is created
+   mkdir -p data/DINO
+   curl -L -o 50.zip https://zenodo.org/records/19474414/files/50.zip
+   unzip 50.zip -d data/DINO/
    ```
 
 2. **(Optional) Combine restart files and mesh mask** using [REBUILD_NEMO](https://forge.nemo-ocean.eu/nemo/nemo/-/tree/4.2.0/tools/REBUILD_NEMO):
@@ -74,11 +78,17 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
    ./rebuild_nemo -n ./nam_rebuild data/DINO/mesh_mask 36
    ```
 
-3. **Resample data**
+3. **(Optional) Resample data**
 
-   > TODO: This step will soon use `cdo` to resample data. This is currently being done with [nemo-spinup-forecast/Notebooks/Resample_ssh.ipynb](https://github.com/m2lines/nemo-spinup-forecast/blob/main/Notebooks/Resample_ssh.ipynb)
+   This step is not required when using the Zenodo reference data, which already contains the resampled file `DINO_1m_to_1y_grid_T.nc`.
 
-   All data must be temporally aligned before forecasting. Use the [Resample_ssh.ipynb](https://github.com/m2lines/nemo-spinup-forecast/blob/main/Notebooks/Resample_ssh.ipynb) notebook to convert monthly SSH (`DINO_1m_grid_T.nc`) to annual (`DINO_1m_To_1y_grid_T.nc`). Temperature and salinity (3-D) are already annual (`DINO_1y_grid_T.nc`).
+   All data must be temporally aligned before forecasting. If you are bringing your own NEMO output, convert monthly SSH to annual using [`cdo`](https://code.mpimet.mpg.de/projects/cdo):
+
+   ```bash
+   cdo yearmean DINO_1m_grid_T.nc DINO_1m_to_1y_grid_T.nc
+   ```
+
+   Temperature and salinity (3-D) are already annual (`DINO_1y_grid_T.nc`).
 
    If more training data is needed, concatenate monthly outputs `*grid_T.nc` with `ncrcat`, part of the [NCO (netCDF Operators)](https://nco.sourceforge.net/).
 
