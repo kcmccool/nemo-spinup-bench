@@ -53,7 +53,7 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
 >
 > The commands below assume reference data is downloaded to `data/DINO/`. Substitute this with your own data directory if not using the reference data.
 
-### Data preparation
+### A. Data preparation
 
 1. **Get simulation data**
 
@@ -82,7 +82,9 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
 
    If more training data is needed, concatenate monthly outputs `*grid_T.nc` with `ncrcat`, part of the [NCO (netCDF Operators)](https://nco.sourceforge.net/).
 
-### Spin-up acceleration
+---
+
+### B. Spin-up acceleration
 
 The spin-up acceleration pipeline forecasts the ocean state forward in time using dimensionality reduction and Gaussian process regression, generates updated restart files, and evaluates the result against a reference numerical run. We begin with a baseline evaluation of the reference simulation so that the final evaluation can be compared against it.
 
@@ -166,9 +168,9 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
 
 ---
 
-## Running NEMO with the new state
+### C. Running NEMO with the new state
 
-1. **Copy the experiment directory** inside the NEMO repository as a backup; the original will be overwritten in the next step.
+1. **Copy the experiment directory** `EXP00` as a backup; the original will be overwritten in the next step.
 
 2. **Copy the updated restart files** (`NEW_DINO_<time>_restart_<proc_id>.nc`) back to the original experiment directory.
 
