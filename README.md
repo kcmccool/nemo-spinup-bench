@@ -85,7 +85,7 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
    All data must be temporally aligned before forecasting. If you are bringing your own NEMO output, convert monthly SSH to annual using [`cdo`](https://code.mpimet.mpg.de/projects/cdo):
 
    ```bash
-   cdo yearmean DINO_1m_grid_T.nc DINO_1m_to_1y_grid_T.nc
+   cdo yearmean DINO_1m_grid_T.nc DINO_1m_To_1y_grid_T.nc
    ```
 
    Temperature and salinity (3-D) are already annual (`DINO_1y_grid_T.nc`).
@@ -123,8 +123,8 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
      --comp 1 \
      --steps 30 \
      --path data/50 \
-     --ocean-terms nemo-spinup-forecast/ocean_terms.yaml \
-     --techniques-config nemo-spinup-forecast/src/nemo_spinup_forecast/techniques_config.yaml
+     --ocean-terms ./nemo-spinup-forecast/src/nemo_spinup_forecast/configs/ocean_terms.DINO.yaml \
+     --techniques-config nemo-spinup-forecast/src/nemo_spinup_forecast/configs/techniques_config.yaml
    ```
 
    | Argument              | Description                                                                                                                               |
