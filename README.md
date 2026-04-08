@@ -122,9 +122,7 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
      --end 50 \
      --comp 1 \
      --steps 30 \
-     --path data/50 \
-     --ocean-terms ./nemo-spinup-forecast/src/nemo_spinup_forecast/configs/ocean_terms.DINO.yaml \
-     --techniques-config nemo-spinup-forecast/src/nemo_spinup_forecast/configs/techniques_config.yaml
+     --path data/50
    ```
 
    | Argument              | Description                                                                                                                               |
