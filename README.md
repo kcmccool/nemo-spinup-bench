@@ -51,7 +51,7 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
 
 > The entire pipeline assumes NEMO 4.2.0 and a completed cold-start NEMO run, i.e. output files, restart files, and a `mesh_mask.nc` are available before starting.
 >
-> The commands below assume reference data is downloaded to `data/DINO/`. Substitute this with your own data directory if not using the reference data.
+> The commands below assume reference data is downloaded to `data/50/`. Substitute this with your own data directory if not using the reference data.
 
 ### A. Data preparation
 
@@ -61,12 +61,12 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
 
    **Download data from Zenodo**
 
-   Download `50.zip` from [Zenodo record 19474414](https://zenodo.org/records/19474414), unzip it, and place the contents in `data/DINO/`. The record also provides `200.zip` (200 years of DINO output) and `restart.zip` (200 annual restart files) for extended experiments.
+   Download `50.zip` from [Zenodo record 19474414](https://zenodo.org/records/19474414), unzip it, and place the contents in `data/50/`. The record also provides `200.zip` (200 years of DINO output) and `restart.zip` (200 annual restart files) for extended experiments.
 
    ```bash
-   mkdir -p data/DINO
+   mkdir -p data
    curl -L -o 50.zip https://zenodo.org/records/19474414/files/50.zip
-   unzip 50.zip -d data/DINO/
+   unzip 50.zip -d data/
    ```
 
 2. **(Optional) Combine restart files and mesh mask** using [REBUILD_NEMO](https://forge.nemo-ocean.eu/nemo/nemo/-/tree/4.2.0/tools/REBUILD_NEMO):
@@ -74,8 +74,8 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
    This step is only required if you are using your own NEMO run. The Zenodo reference data already includes combined files. You can use the same module environment used to run NEMO/DINO to compile `rebuild_nemo`.
 
    ```bash
-   ./rebuild_nemo -n ./nam_rebuild data/DINO/restart/DINO_00576000_restart 36
-   ./rebuild_nemo -n ./nam_rebuild data/DINO/mesh_mask 36
+   ./rebuild_nemo -n ./nam_rebuild data/50/DINO_00576000_restart 36
+   ./rebuild_nemo -n ./nam_rebuild data/50/mesh_mask 36
    ```
 
 3. **(Optional) Resample data**
@@ -102,8 +102,8 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
 
    ```bash
    nemo-spinup-evaluation \
-     --sim-path data/DINO \
-     --config nemo-spinup-evaluation/configs/DINO-setup.yaml \
+     --sim-path data/50 \
+     --config configs/DINO-evaluation.yaml \
      --results-dir output \
      --result-file-prefix baseline \
      --mode both
@@ -122,7 +122,7 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
      --end 50 \
      --comp 1 \
      --steps 30 \
-     --path data/DINO \
+     --path data/50 \
      --ocean-terms nemo-spinup-forecast/ocean_terms.yaml \
      --techniques-config nemo-spinup-forecast/src/nemo_spinup_forecast/techniques_config.yaml
    ```
@@ -150,9 +150,9 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
 
    ```bash
    nemo-spinup-restart \
-     --restart_path data/DINO/restart/ \
+     --restart_path data/50/ \
      --radical DINO_00576000_restart \
-     --mask_file data/DINO/mesh_mask.nc \
+     --mask_file data/50/mesh_mask.nc \
      --prediction_path forecasts/simu_predicted/ \
      --ocean_terms nemo-spinup-forecast/ocean_terms.yaml
    ```
@@ -170,9 +170,9 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
 
    ```bash
    nemo-spinup-evaluation \
-     --sim-path ./data/DINO \
-     --ref-sim-path ./data/DINO/reference/ \  # offline ground truth reference simulation
-     --config nemo-spinup-evaluation/configs/DINO-setup.yaml \
+     --sim-path ./data/50 \
+     --ref-sim-path ./data/reference/ \  # offline ground truth reference simulation
+     --config configs/DINO-evaluation.yaml \
      --results-dir output \
      --result-file-prefix spinup_evaluation \
      --mode restart
