@@ -138,7 +138,9 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
    | `--ocean-terms`       | Path to `ocean_terms.yaml` mapping logical terms (SSH, Salinity, Temperature) to dataset variable names; uses packaged default if omitted |
    | `--techniques-config` | Path to `techniques_config.yaml` selecting DR and forecast techniques; uses packaged default if omitted                                   |
 
-   The forecast outputs predicted ocean state variables to `forecasts/simu_predicted/`.
+   The forecast outputs predicted ocean state variables to `<--path>/forecasts/latest/forecasts/simu_predicted/`.
+
+   > Note: a `--prediction-dir` CLI argument will soon be added to `nemo-spinup-forecast` so that the output location can be specified explicitly rather than nested under the input data directory.
 
 ---
 
@@ -153,9 +155,11 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
      --restart_path data/50/ \
      --radical DINO_00576000_restart \
      --mask_file data/50/mesh_mask.nc \
-     --prediction_path forecasts/simu_predicted/ \
-     --ocean_terms nemo-spinup-forecast/ocean_terms.yaml
+     --prediction_path data/50/forecasts/latest/forecasts/simu_predicted/ \
+     --ocean_terms configs/forecast_ocean_terms.DINO.yaml
    ```
+
+   > Note: the `--prediction_path` is currently nested under `data/50/forecasts/latest/forecasts/` because `nemo-spinup-forecast`'s CLI creates an extra `forecasts/` subdirectory inside each run. This will be simplified upstream so the path becomes `data/50/forecasts/latest/simu_predicted/`.
 
    - **`--radical`** is the prefix of the restart file (e.g. `DINO_00576000_restart`)
    - Output files are named as the originals but with `NEW` prepended
