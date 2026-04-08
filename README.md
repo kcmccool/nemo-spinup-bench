@@ -1,6 +1,6 @@
 # NEMO Spin-Up Benchmark
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19474414.svg)](https://doi.org/10.5281/zenodo.19474414)
 
 Reproducible research artifact for the NEMO spin-up acceleration method. This repository
 contains the full end-to-end workflow as a citable, versioned snapshot.
