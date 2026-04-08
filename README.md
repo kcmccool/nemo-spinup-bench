@@ -21,7 +21,7 @@ contains the full end-to-end workflow as a citable, versioned snapshot.
 
 Reference data (DINO output, restart files, `mesh_mask.nc`) is archived on Zenodo:
 
-> **Zenodo DOI:** _to be added_
+> **Zenodo DOI:** [10.5281/zenodo.19474414](https://doi.org/10.5281/zenodo.19474414)
 
 ---
 
