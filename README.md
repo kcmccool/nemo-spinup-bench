@@ -222,7 +222,7 @@ Results from running the benchmark with 50 years of DINO data, forecasting 30 ye
 **Observations:**
 - Temperature metrics are well preserved (< 1% change), indicating the scalar field forecast is accurate.
 - Density monotonicity violations increased from near-zero to ~1.2% of grid points.
-- Transport metrics (ACC Drake, NASTG BSF) show large deviations. The geostrophic velocity reconstruction in `nemo-spinup-restart` produces physically unrealistic velocities — this is a known issue under investigation.
+- Transport metrics (ACC Drake, NASTG BSF) show large deviations. The geostrophic velocity reconstruction in `nemo-spinup-restart` produces physically unrealistic velocities - this is a known issue under investigation.
 
 ---
 
