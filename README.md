@@ -32,7 +32,7 @@ This installs all three nemo-spinup-{forecast, restart, evaluation} packages in 
 1. **Clone this repository with submodules**
 
    ```bash
-   git clone --recurse-submodules git@github.com:m2lines/nemo-spinup-bench.git
+   git clone --recurse-submodules https://github.com/m2lines/nemo-spinup-bench.git
    cd nemo-spinup-bench
    ```
 
