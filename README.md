@@ -154,7 +154,7 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
      --radical DINO_00576000_restart \
      --mask_file data/50/mesh_mask.nc \
      --prediction_path data/50/forecasts/latest/forecasts/simu_predicted/ \
-     --ocean_terms configs/forecast_ocean_terms.DINO.yaml
+     --ocean_terms ./nemo-spinup-forecast/src/nemo_spinup_forecast/configs/ocean_terms.DINO.yaml
    ```
 
    > Note: the `--prediction_path` is currently nested under `data/50/forecasts/latest/forecasts/` because `nemo-spinup-forecast`'s CLI creates an extra `forecasts/` subdirectory inside each run. This will be simplified upstream so the path becomes `data/50/forecasts/latest/simu_predicted/`.
@@ -164,27 +164,24 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
 
 ---
 
-### D. (Optional) Evaluate against a reference simulation
+### D. Evaluate the projected restart file
 
-7. **Evaluate** the projected state and compare against the baseline:
-
-   This step is optional and only applies if you have an offline reference simulation to compare against. It evaluates the updated restart state against the reference at 80 years. We recommend outputting restart files fairly frequently to test different step settings.
+7. **Move the projected restart to a separate directory and evaluate it:**
 
    ```bash
+   mkdir -p data/50_projected
+   mv data/50/NEW_DINO_00576000_restart*.nc data/50_projected/
+   ln -s ../50/mesh_mask.nc data/50_projected/mesh_mask.nc
+
    nemo-spinup-evaluation \
-     --sim-path ./data/50 \
-     --ref-sim-path ./data/reference/ \  # offline ground truth reference simulation
+     --sim-path data/50_projected \
      --config configs/DINO-evaluation.yaml \
      --results-dir output \
-     --result-file-prefix spinup_evaluation \
+     --result-file-prefix projected \
      --mode restart
    ```
 
-   - **`--ref-sim-path`** — the offline reference simulation used as ground truth for comparison. TODO: upload full reference simulation data to Zenodo.
-
-   Results are written to `output/spinup_evaluation_restart.csv`. Compare these against the 80 year reference restart file output to understand how the ML forecast from the spin-up acceleration compares to the simulation.
-
-   > TODO: Does the DINO-setup.yaml need to modified here to point to the 80 year restart file.
+   Compare `output/projected_restart.csv` against the baseline from step 4 (`output/baseline_restart.csv`) to assess the impact of the spin-up acceleration.
 
 ---
 
@@ -204,6 +201,28 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
    | `ln_rstart`    | `.true.` to start from a restart file          |
 
 4. **Restart DINO** using the updated restart file.
+
+---
+
+## Example Results
+
+Results from running the benchmark with 50 years of DINO data, forecasting 30 years ahead from year 20–50 using PCA + Gaussian process regression (`--start 20 --end 50 --steps 30 --comp 1`).
+
+| Metric | Baseline (50 yr) | Projected | Difference | % Change |
+|---|---|---|---|---|
+| check_density_from_file | 0.000020 | 0.011721 | +0.011701 | — |
+| check_density_computed | 0.000032 | 0.011721 | +0.011689 | — |
+| temperature_500m_30NS (°C) | 11.508 | 11.441 | −0.067 | −0.58% |
+| temperature_BWbox (°C) | 5.197 | 5.203 | +0.005 | +0.10% |
+| temperature_DWbox (°C) | 5.329 | 5.318 | −0.011 | −0.21% |
+| ACC_Drake (Sv) | 188.69 | −102.75 | −291.44 | −154% |
+| ACC_Drake_2 (Sv) | 188.69 | −102.75 | −291.44 | −154% |
+| NASTG_BSF_max (Sv) | 35.52 | 16.81 | −18.70 | −52.7% |
+
+**Observations:**
+- Temperature metrics are well preserved (< 1% change), indicating the scalar field forecast is accurate.
+- Density monotonicity violations increased from near-zero to ~1.2% of grid points.
+- Transport metrics (ACC Drake, NASTG BSF) show large deviations. The geostrophic velocity reconstruction in `nemo-spinup-restart` produces physically unrealistic velocities — this is a known issue under investigation.
 
 ---
 
