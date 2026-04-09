@@ -6,9 +6,21 @@ mesh_mask: mesh_mask.nc
 restart_files: 'restart'
 
 output_variables:
-  temperature: DINO_1y_grid_T.nc
-  salinity: DINO_1y_grid_T.nc
-  density: DINO_1y_grid_T.nc
-  ssh: DINO_1m_To_1y_grid_T.nc
-  velocity_u: DINO_1y_grid_U.nc
-  velocity_v: DINO_1y_grid_V.nc
+  temperature:
+    filename: DINO_1y_grid_T.nc
+    term: toce
+  salinity:
+    filename: DINO_1y_grid_T.nc
+    term: soce
+  density:
+    filename: DINO_1y_grid_T.nc
+    term: rhop
+  ssh:
+    filename: DINO_1m_To_1y_grid_T.nc
+    term: ssh
+  velocity_u:
+    filename: DINO_1y_grid_U.nc
+    term: uoce
+  velocity_v:
+    filename: DINO_1y_grid_V.nc
+    term: voce
