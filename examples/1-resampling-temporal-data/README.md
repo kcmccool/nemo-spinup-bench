@@ -4,25 +4,32 @@ This data was provided by Etienne Meunier to test resampling using cdo and other
 
 It contains instantaneous data. I would advise outputting 10 day averages instead of instantaneous outputs to avoid unnecessary jitter. We proceed with this example as a demonstration of how the user can evaluate with nemo-spinup-evaluation.
 
-## Pipeline steps:
+## Pipeline steps
 
-conda install -c conda-forge cdo
+1. **Install CDO** (if not already available):
+   ```bash
+   conda install -c conda-forge cdo
+   ```
 
-Get data from zenodo
+2. **Download data from Zenodo:**
+   ```bash
+   wget https://zenodo.org/records/19474414/files/restart3.tar
+   ```
 
-wget https://zenodo.org/records/19474414/files/restart3.tar
+3. **Extract the archive:**
+   ```bash
+   tar xvf restart3.tar
+   ```
 
-untar 
+4. **Run the resampling step:**
+   ```bash
+   bash resample.sh
+   ```
 
-tar xvf restart3.tar
-
-execute resampling step
-
-bash resample.sh
-
-and then evaluated
-
-bash evaluate.sh
+5. **Run the evaluation:**
+   ```bash
+   bash evaluate.sh
+   ```
 
 
 ## Data Processing Note: 10-Day to Monthly Resampling
