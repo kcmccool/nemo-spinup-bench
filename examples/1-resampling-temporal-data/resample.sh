@@ -26,9 +26,7 @@ cdo -f nc4 -settaxis,3060-01-16,00:00:00,1mon -monmean -selyear,3060/3062 \
     "${INDIR}/DINO_10d_grid_inst_T_3D.nc" \
     "${OUTDIR}/DINO_1m_grid_T_3D.nc" 
 
-# cdo showtimestamp resampled/DINO_1m_grid_T_3D.nc | head -10 
-
-# cdo -f nc4 -settaxis,3060-01-16,00:00:00,1mon -monmean DINO_10d_grid_inst_T_3D.nc DINO_1m_grid_T_3D.nc
+echo "==> 10d -> 1m: U_3D"
 cdo -f nc4 -settaxis,3060-01-16,00:00:00,1mon -monmean -selyear,3060/3062 \
     "${INDIR}/DINO_10d_grid_inst_U_3D.nc" \
     "${OUTDIR}/DINO_1m_grid_U_3D.nc" 
@@ -37,6 +35,9 @@ echo "==> 10d -> 1m: V_3D"
 cdo -f nc4 -settaxis,3060-01-16,00:00:00,1mon -monmean -selyear,3060/3062 \
     "${INDIR}/DINO_10d_grid_inst_V_3D.nc" \
     "${OUTDIR}/DINO_1m_grid_V_3D.nc" 
+
+
+# cdo showtimestamp resampled/DINO_1m_grid_T_3D.nc | head -10 
 
 # ---------------------------------------------------------------------------
 # Step 2: 1m -> 3m quarterly mean
@@ -53,15 +54,5 @@ echo "==> 1m -> 3m: T_3D"
 cdo -f nc4 timselmean,3 \
     "${OUTDIR}/DINO_1m_grid_T_3D.nc" \
     "${OUTDIR}/DINO_3m_grid_T_3D.nc"
-
-echo "==> 1m -> 3m: U_3D"
-cdo -f nc4 timselmean,3 \
-    "${OUTDIR}/DINO_1m_grid_U_3D.nc" \
-    "${OUTDIR}/DINO_3m_grid_U_3D.nc"
-
-echo "==> 1m -> 3m: V_3D"
-cdo -f nc4 timselmean,3 \
-    "${OUTDIR}/DINO_1m_grid_V_3D.nc" \
-    "${OUTDIR}/DINO_3m_grid_V_3D.nc"
 
 echo "Done. Output in: ${OUTDIR}"
