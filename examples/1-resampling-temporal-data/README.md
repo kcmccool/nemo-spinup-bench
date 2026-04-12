@@ -22,8 +22,10 @@ It contains instantaneous data. I would advise outputting 10 day averages instea
    ```
 
 4. **Run the resampling step:**
+
+This assumes data has been extracted to the restart3 directory inside 1-sampling-temporal-data example.
    ```bash
-   bash resample.sh
+   bash resample.sh ./restart3
    ```
 
 5. **Run the evaluation:**
