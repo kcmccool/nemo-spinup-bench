@@ -6,7 +6,7 @@ set -euo pipefail
 # Define the directory paths
 INDIR="$(dirname "$(realpath "$0")")"
 CONFIG_DIR="${INDIR}"
-DATA_DIR="${INDIR}/resampled"
+DATA_DIR="${INDIR}/restart3"
 
 # Create a temporary directory for the evaluation results
 mkdir -p "${INDIR}/results"

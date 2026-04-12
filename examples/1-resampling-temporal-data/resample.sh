@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-INDIR="$(dirname "$(realpath "$0")")"
+INDIR="${1:-$(dirname "$(realpath "$0")")}"
 OUTDIR="${INDIR}/resampled"
 
 mkdir -p "${OUTDIR}"

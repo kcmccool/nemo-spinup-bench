@@ -7,13 +7,13 @@ restart_files: 'restart'
 
 output_variables:
   temperature:
-    file: DINO_3m_grid_T_3D.nc
+    file: resampled/DINO_3m_grid_T_3D.nc
     var: toce_inst
   salinity:
-    file: DINO_3m_grid_T_3D.nc
+    file: resampled/DINO_3m_grid_T_3D.nc
     var: soce_inst
   ssh:
-    file: DINO_3m_grid_T_2D.nc
+    file: resampled/DINO_3m_grid_T_2D.nc
     var: ssh
   velocity_u:
     file: DINO_3m_grid_U_3D.nc
