@@ -8,21 +8,21 @@ Data is available from two Zenodo repositories:
 
 ## Prerequisites
 
-Install xESMF for regridding:
+Create a conda environment and install xESMF (required for regridding). Then create a pip venv with access to the conda packages using `--system-site-packages`:
 
 ```bash
+conda create -n nemo python=3.10
+conda activate nemo
 conda install -c conda-forge xesmf
+
+python -m venv venv --system-site-packages
+source venv/bin/activate
 ```
 
-Install the nemo-spinup-restart tool (from the repo root):
+Install the nemo-spinup-restart and nemo-spinup-evaluation tools (from the repo root):
 
 ```bash
 pip install ./nemo-spinup-restart
-```
-
-Install nemo-spinup-evaluation (from the repo root):
-
-```bash
 pip install ./nemo-spinup-evaluation
 ```
 
@@ -60,17 +60,20 @@ This runs the `nemo-upscale` tool which:
 3. Regrids to fine (0.25-degree) resolution using xESMF bilinear interpolation
 4. Applies the fine resolution mask and zeros out velocities for NEMO to recompute
 
-Output is written to `./generated/`.
+Output is written to `./generated/coarse/` and `./generated/fine/`.
 
-## Evaluate using nemo-spinup-evaluationuation
+## Evaluate using nemo-spinup-evaluation
 
-Evaluate the generated restart file against reference diagnostics:
+Evaluate the generated restart files at both resolutions. There are separate configs for the coarse (1-degree) and fine (0.25-degree) restart files:
+
+- `gen-setup-100.yaml` — evaluates the coarse restart
+- `gen-setup-025.yaml` — evaluates the fine restart
 
 ```bash
 bash evaluate.sh
 ```
 
-Results are saved to `./results/`.
+Results are saved to `./results/` with prefixes `gen-C2-100` and `gen-C2-025`.
 
 ## Running the full pipeline
 

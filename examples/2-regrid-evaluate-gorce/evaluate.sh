@@ -1,25 +1,27 @@
 #!/bin/bash
-# Evaluate the generated restart file using nemo-spinup-evaluation
+# Evaluate generated restart files using nemo-spinup-evaluation
 
 set -euo pipefail
 
 INDIR="$(dirname "$(realpath "$0")")"
-CONFIG="${INDIR}/gen-setup.yaml"
-DATA_DIR="${INDIR}/generated"
 RESULTS_DIR="${INDIR}/results"
 
 mkdir -p "${RESULTS_DIR}"
 
-if [ ! -f "$CONFIG" ]; then
-    echo "Error: Evaluation configuration file not found at $CONFIG"
-    exit 1
-fi
-
-echo "==> Evaluating generated restart file"
+echo "==> Evaluating 1-degree (coarse) restart"
 nemo-spinup-evaluation \
-    --sim-path "${DATA_DIR}" \
-    --config "${CONFIG}" \
+    --config "${INDIR}/gen-setup-100.yaml" \
+    --sim-path "${INDIR}/generated/coarse" \
     --mode restart \
-    --results-dir "${RESULTS_DIR}"
+    --results-dir "${RESULTS_DIR}" \
+    --result-file-prefix gen-C2-100
+
+echo "==> Evaluating 0.25-degree (fine) restart"
+nemo-spinup-evaluation \
+    --config "${INDIR}/gen-setup-025.yaml" \
+    --sim-path "${INDIR}/generated/fine" \
+    --mode restart \
+    --results-dir "${RESULTS_DIR}" \
+    --result-file-prefix gen-C2-025
 
 echo "Evaluation complete. Results are saved in: ${RESULTS_DIR}"

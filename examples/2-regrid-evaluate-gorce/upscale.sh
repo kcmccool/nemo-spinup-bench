@@ -24,4 +24,13 @@ nemo-upscale upscale \
     --time-index      4 \
     --output-dir      "${OUTPUT_DIR}"
 
+# Move restart files into resolution-specific directories with mesh mask symlinks
+mkdir -p "${OUTPUT_DIR}/coarse" "${OUTPUT_DIR}/fine"
+
+mv "${OUTPUT_DIR}/generated_restart_C2_coarse.nc" "${OUTPUT_DIR}/coarse/"
+mv "${OUTPUT_DIR}/generated_restart_C2_fine.nc"   "${OUTPUT_DIR}/fine/"
+
+ln -sf "${DATA_DIR}/100-reference/mesh_mask.nc" "${OUTPUT_DIR}/coarse/mesh_mask.nc"
+ln -sf "${DATA_DIR}/025-reference/mesh_mask.nc" "${OUTPUT_DIR}/fine/mesh_mask.nc"
+
 echo "Done. Output in: ${OUTPUT_DIR}"
