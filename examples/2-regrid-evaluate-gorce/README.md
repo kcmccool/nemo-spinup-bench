@@ -28,20 +28,31 @@ pip install ./nemo-spinup-evaluation
 
 ## Data setup
 
-Download data from both Zenodo repositories and organise into the following structure:
+Download data from both Zenodo repositories using the provided script:
+
+```bash
+bash download-data.sh
+```
+
+Or download manually:
+
+1. **Diffusion model outputs** from https://zenodo.org/records/16941776 — download `generated_npy_files.zip` and extract the `chamon_C2_clean/` directory into `data/diffusion_states/`.
+2. **Reference data** from https://zenodo.org/records/19474413 — download `regrid-evaluate.zip` and extract into `data/`.
+
+The expected directory structure is:
 
 ```
 data/
 ├── diffusion_states/
-│   └── chamon_C2_clean/       # from generated_npy_files.zip (zenodo/16941776)
+│   └── chamon_C2_clean/
 │       ├── toce.npy
 │       ├── soce.npy
 │       └── ssh.npy
-├── 100-reference/             # from upscale-example.zip (zenodo/19557419)
+├── 100-reference/
 │   ├── DINO_00000002_restart.nc
 │   ├── mesh_mask.nc
 │   └── namelist_cfg
-└── 025-reference/             # from upscale-example.zip (zenodo/19557419)
+└── 025-reference/
     ├── DINO_10800000_restart.nc
     └── mesh_mask.nc
 ```
