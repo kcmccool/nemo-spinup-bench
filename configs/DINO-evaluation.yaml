@@ -24,3 +24,13 @@ output_variables:
   velocity_v:
     filename: DINO_1y_grid_V.nc
     term: voce
+
+variable_map:
+  time_counter: [time]
+  temperature: [toce, tn]
+  velocity_u: [un, u, uoce, zonal_velocity]
+  velocity_v: [vn, v, voce, meridional_velocity]
+  depth: [nav_lev, deptht, depthu, depthv]
+  ssh: [sshn]
+  salinity: [so, sn, soce]
+  density: [rhop]

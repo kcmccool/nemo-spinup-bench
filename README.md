@@ -53,6 +53,14 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
 >
 > The commands below assume reference data is downloaded to `data/50/`. Substitute this with your own data directory if not using the reference data.
 
+> Each step below is also available as a standalone script in `pipeline/`, runnable from the bench root:
+> ```bash
+> bash pipeline/1-download-data.sh
+> bash pipeline/2-forecast.sh
+> bash pipeline/3-restart.sh
+> bash pipeline/4-evaluate.sh
+> ```
+
 ### A. Data preparation
 
 1. **Get simulation data**
@@ -122,7 +130,8 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
      --end 50 \
      --comp 1 \
      --steps 30 \
-     --path data/50
+     --data-path data/50 \
+     --output-path data/50/predictions
    ```
 
    | Argument              | Description                                                                                                                               |
@@ -132,13 +141,12 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
    | `--end`               | Ending year (usually the last simulated year)                                                                                             |
    | `--comp`              | Number or ratio of components to use                                                                                                      |
    | `--steps`             | Jump size (years if `--ye True`, months otherwise)                                                                                        |
-   | `--path`              | Directory containing the simulation files                                                                                                 |
+   | `--data-path`         | Directory containing the simulation files                                                                                                 |
+   | `--output-path`       | Directory to write forecast results to; a timestamped run directory is created under `data/50/predictions/runs/` and `data/50/predictions/latest` is a symlink to it |
    | `--ocean-terms`       | Path to `ocean_terms.yaml` mapping logical terms (SSH, Salinity, Temperature) to dataset variable names; uses packaged default if omitted |
    | `--techniques-config` | Path to `techniques_config.yaml` selecting DR and forecast techniques; uses packaged default if omitted                                   |
 
-   The forecast outputs predicted ocean state variables to `<--path>/forecasts/latest/forecasts/simu_predicted/`.
-
-   > Note: a `--prediction-dir` CLI argument will soon be added to `nemo-spinup-forecast` so that the output location can be specified explicitly rather than nested under the input data directory.
+   With the example above, the forecast outputs predicted ocean state variables to `data/50/predictions/latest/forecast/simu_predicted/`.
 
 ---
 
@@ -153,11 +161,9 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
      --restart_path data/50/ \
      --radical DINO_00576000_restart \
      --mask_file data/50/mesh_mask.nc \
-     --prediction_path data/50/forecasts/latest/forecasts/simu_predicted/ \
+     --prediction_path data/50/predictions/latest/forecast/simu_predicted/ \
      --ocean_terms ./nemo-spinup-forecast/src/nemo_spinup_forecast/configs/ocean_terms.DINO.yaml
    ```
-
-   > Note: the `--prediction_path` is currently nested under `data/50/forecasts/latest/forecasts/` because `nemo-spinup-forecast`'s CLI creates an extra `forecasts/` subdirectory inside each run. This will be simplified upstream so the path becomes `data/50/forecasts/latest/simu_predicted/`.
 
    - **`--radical`** is the prefix of the restart file (e.g. `DINO_00576000_restart`)
    - Output files are named as the originals but with `NEW` prepended
