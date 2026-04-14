@@ -1,6 +1,6 @@
 # NEMO Spin-Up Benchmark
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19474414.svg)](https://doi.org/10.5281/zenodo.19474414)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19557419.svg)](https://doi.org/10.5281/zenodo.19557419)
 
 Reproducible research artifact for the NEMO spin-up acceleration method. This repository
 contains the full end-to-end workflow as a citable, versioned snapshot.
@@ -21,7 +21,7 @@ contains the full end-to-end workflow as a citable, versioned snapshot.
 
 Reference data (DINO output, restart files, `mesh_mask.nc`) is archived on Zenodo:
 
-> **Zenodo DOI:** [10.5281/zenodo.19474414](https://doi.org/10.5281/zenodo.19474414)
+> **Zenodo DOI:** [10.5281/zenodo.19557419](https://doi.org/10.5281/zenodo.19557419)
 
 ---
 
@@ -56,9 +56,10 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
 > Each step below is also available as a standalone script in `pipeline/`, runnable from the bench root:
 > ```bash
 > bash pipeline/1-download-data.sh
-> bash pipeline/2-forecast.sh
-> bash pipeline/3-restart.sh
-> bash pipeline/4-evaluate.sh
+> bash pipeline/2-evaluate-baseline.sh
+> bash pipeline/3-forecast.sh
+> bash pipeline/4-restart.sh
+> bash pipeline/5-evaluate-projected.sh
 > ```
 
 ### A. Data preparation
@@ -69,13 +70,15 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
 
    **Download data from Zenodo**
 
-   Download `50.zip` from [Zenodo record 19474414](https://zenodo.org/records/19474414), unzip it, and place the contents in `data/50/`. The record also provides `200.zip` (200 years of DINO output) and `restart.zip` (200 annual restart files) for extended experiments.
+   Download `50.zip` from [Zenodo record 19557419](https://zenodo.org/records/19557419), unzip it, and place the contents in `data/50/`. The record also provides `200.zip` (200 years of DINO output) and `restart.zip` (200 annual restart files) for extended experiments.
 
    ```bash
    mkdir -p data
-   curl -L -o 50.zip https://zenodo.org/records/19474414/files/50.zip
+   curl -L -o 50.zip https://zenodo.org/records/19557419/files/50.zip
    unzip 50.zip -d data/
    ```
+
+   Or run `bash pipeline/1-download-data.sh`.
 
 2. **(Optional) Combine restart files and mesh mask** using [REBUILD_NEMO](https://forge.nemo-ocean.eu/nemo/nemo/-/tree/4.2.0/tools/REBUILD_NEMO):
 
@@ -112,12 +115,14 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
    nemo-spinup-evaluation \
      --sim-path data/50 \
      --config configs/DINO-evaluation.yaml \
-     --results-dir output \
+     --results-dir evaluation-output \
      --result-file-prefix baseline \
      --mode both
    ```
 
-   Results are written to `output/baseline_restart.csv` and `output/baseline_grid.csv`.
+   Results are written to `evaluation-output/baseline_restart.csv` and `evaluation-output/baseline_grid.csv`.
+
+   Or run `bash pipeline/2-evaluate-baseline.sh`.
 
 5. **Create the projected state**
 
@@ -131,7 +136,7 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
      --comp 1 \
      --steps 30 \
      --data-path data/50 \
-     --output-path data/50/predictions
+     --output-path data/50_projected
    ```
 
    | Argument              | Description                                                                                                                               |
@@ -142,11 +147,13 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
    | `--comp`              | Number or ratio of components to use                                                                                                      |
    | `--steps`             | Jump size (years if `--ye True`, months otherwise)                                                                                        |
    | `--data-path`         | Directory containing the simulation files                                                                                                 |
-   | `--output-path`       | Directory to write forecast results to; a timestamped run directory is created under `data/50/predictions/runs/` and `data/50/predictions/latest` is a symlink to it |
+   | `--output-path`       | Directory to write forecast results to; a timestamped run directory is created under `data/50_projected/runs/` and `data/50_projected/latest` is a symlink to it |
    | `--ocean-terms`       | Path to `ocean_terms.yaml` mapping logical terms (SSH, Salinity, Temperature) to dataset variable names; uses packaged default if omitted |
    | `--techniques-config` | Path to `techniques_config.yaml` selecting DR and forecast techniques; uses packaged default if omitted                                   |
 
-   With the example above, the forecast outputs predicted ocean state variables to `data/50/predictions/latest/forecast/simu_predicted/`.
+   With the example above, the forecast outputs predicted ocean state variables to `data/50_projected/latest/forecast/simu_predicted/`.
+
+   Or run `bash pipeline/3-forecast.sh`.
 
 ---
 
@@ -157,47 +164,53 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
    Using the forecasted ocean state from the previous step, `nemo-spinup-restart` injects the predicted variables (SSH, temperature, salinity, and derived velocities) into the original NEMO restart file. A new restart file is created with `NEW_` prepended to the filename, leaving the original intact and ready to initialise NEMO at the projected year.
 
    ```bash
+   ln -sf ../50/DINO_00576000_restart.nc data/50_projected/DINO_00576000_restart.nc
+
    nemo-spinup-restart \
-     --restart_path data/50/ \
+     --restart_path data/50_projected/ \
      --radical DINO_00576000_restart \
      --mask_file data/50/mesh_mask.nc \
-     --prediction_path data/50/predictions/latest/forecast/simu_predicted/ \
-     --ocean_terms ./nemo-spinup-forecast/src/nemo_spinup_forecast/configs/ocean_terms.DINO.yaml
+     --prediction_path data/50_projected/latest/forecast/simu_predicted/ \
+     --ocean_terms configs/ocean_terms.DINO.yaml
    ```
+
+   The source restart is symlinked into `data/50_projected/` so that `nemo-spinup-restart` reads from and writes the `NEW_` file into the same directory.
 
    - **`--radical`** is the prefix of the restart file (e.g. `DINO_00576000_restart`)
    - Output files are named as the originals but with `NEW` prepended
+
+   Or run `bash pipeline/4-restart.sh`.
 
 ---
 
 ### D. Evaluate the projected restart file
 
-7. **Move the projected restart to a separate directory and evaluate it:**
+7. **Evaluate the projected restart:**
 
    ```bash
-   mkdir -p data/50_projected
-   mv data/50/NEW_DINO_00576000_restart*.nc data/50_projected/
-   ln -s ../50/mesh_mask.nc data/50_projected/mesh_mask.nc
+   ln -sf ../50/mesh_mask.nc data/50_projected/mesh_mask.nc
 
    nemo-spinup-evaluation \
      --sim-path data/50_projected \
      --config configs/DINO-evaluation.yaml \
-     --results-dir output \
+     --results-dir evaluation-output \
      --result-file-prefix projected \
      --mode restart
    ```
 
-   Compare `output/projected_restart.csv` against the baseline from step 4 (`output/baseline_restart.csv`) to assess the impact of the spin-up acceleration.
+   Compare `evaluation-output/projected_restart.csv` against the baseline from step 4 (`evaluation-output/baseline_restart.csv`) to assess the impact of the spin-up acceleration.
+
+   Or run `bash pipeline/5-evaluate-projected.sh`.
 
 ---
 
 ### E. Running NEMO with the new state
 
-1. **Copy the experiment directory** `EXP00` as a backup; the original will be overwritten in the next step.
+8. **Copy the experiment directory** `EXP00` as a backup; the original will be overwritten in the next step.
 
-2. **Copy the updated restart files** (`NEW_DINO_<time>_restart_<proc_id>.nc`) back to the original experiment directory.
+9. **Copy the updated restart files** (`NEW_DINO_<time>_restart_<proc_id>.nc`) back to the original experiment directory.
 
-3. **Update `namelist_cfg`** under `namrun`:
+10. **Update `namelist_cfg`** under `namrun`:
 
    | Parameter      | Description                                    |
    | -------------- | ---------------------------------------------- |
@@ -206,7 +219,7 @@ The spin-up acceleration pipeline forecasts the ocean state forward in time usin
    | `cn_ocerst_in` | Restart filename (matches latest restart file) |
    | `ln_rstart`    | `.true.` to start from a restart file          |
 
-4. **Restart DINO** using the updated restart file.
+11. **Restart DINO** using the updated restart file.
 
 ---
 

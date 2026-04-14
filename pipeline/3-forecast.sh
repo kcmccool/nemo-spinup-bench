@@ -5,4 +5,4 @@ nemo-spinup-forecast \
     --comp 1 \
     --steps 30 \
     --data-path data/50 \
-    --output-path data/50/predictions
+    --output-path data/50_projected

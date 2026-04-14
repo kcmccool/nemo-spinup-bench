@@ -7,23 +7,23 @@ restart_files: 'restart'
 
 output_variables:
   temperature:
-    filename: DINO_1y_grid_T.nc
-    term: toce
+    file: DINO_1y_grid_T.nc
+    var: toce
   salinity:
-    filename: DINO_1y_grid_T.nc
-    term: soce
+    file: DINO_1y_grid_T.nc
+    var: soce
   density:
-    filename: DINO_1y_grid_T.nc
-    term: rhop
+    file: DINO_1y_grid_T.nc
+    var: rhop
   ssh:
-    filename: DINO_1m_To_1y_grid_T.nc
-    term: ssh
+    file: DINO_1m_To_1y_grid_T.nc
+    var: ssh
   velocity_u:
-    filename: DINO_1y_grid_U.nc
-    term: uoce
+    file: DINO_1y_grid_U.nc
+    var: uoce
   velocity_v:
-    filename: DINO_1y_grid_V.nc
-    term: voce
+    file: DINO_1y_grid_V.nc
+    var: voce
 
 variable_map:
   time_counter: [time]
