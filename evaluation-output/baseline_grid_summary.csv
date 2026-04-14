@@ -1,0 +1,11 @@
+# Metric Evaluation
+# Base Directory: /Users/matt/work/nemo/nemo-spinup-bench/data/50
+# Mesh Mask: /Users/matt/work/nemo/nemo-spinup-bench/data/50/mesh_mask.nc
+# Restart File: /Users/matt/work/nemo/nemo-spinup-bench/data/50/DINO_00576000_restart.nc
+# Output Files:
+#   - /Users/matt/work/nemo/nemo-spinup-bench/data/50/DINO_1y_grid_T.nc
+#   - /Users/matt/work/nemo/nemo-spinup-bench/data/50/DINO_1m_To_1y_grid_T.nc
+#   - /Users/matt/work/nemo/nemo-spinup-bench/data/50/DINO_1y_grid_U.nc
+#   - /Users/matt/work/nemo/nemo-spinup-bench/data/50/DINO_1y_grid_V.nc
+#
+metric
