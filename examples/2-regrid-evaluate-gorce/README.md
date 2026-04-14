@@ -86,6 +86,20 @@ bash evaluate.sh
 
 Results are saved to `./results/` with prefixes `gen-C2-100` and `gen-C2-025`.
 
+## Results
+
+| Metric | Coarse (1°) | Fine (0.25°) |
+|---|---|---|
+| Density (from file) | 0.1875 | 0.1920 |
+| Density (computed) | 0.2102 | 0.2161 |
+| Temperature 500m 30NS | 10.5851 | 10.5861 |
+| Temperature BW box | 3.5304 | 3.5432 |
+| Temperature DW box | 3.6499 | 3.6545 |
+| ACC Drake Passage | 257.2559 | 0.0000 |
+| NASTG BSF max | 35.4295 | 0.0000 |
+
+Note: ACC Drake Passage and NASTG BSF max are zero at fine resolution because velocities are zeroed out in the upscaled restart for NEMO to recompute.
+
 ## Running the full pipeline
 
 To run both steps in sequence:
