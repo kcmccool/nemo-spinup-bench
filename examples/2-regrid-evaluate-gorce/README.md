@@ -36,8 +36,8 @@ bash download-data.sh
 
 Or download manually:
 
-1. **Diffusion model outputs** from https://zenodo.org/records/16941776 — download `generated_npy_files.zip` and extract the `chamon_C2_clean/` directory into `data/diffusion_states/`.
-2. **Reference data** from https://zenodo.org/records/19474413 — download `regrid-evaluate.zip` and extract into `data/`.
+1. **Diffusion model outputs** from https://zenodo.org/records/16941776 - download `generated_npy_files.zip` and extract the `chamon_C2_clean/` directory into `data/diffusion_states/`.
+2. **Reference data** from https://zenodo.org/records/19474413 - download `regrid-evaluate.zip` and extract into `data/`.
 
 The expected directory structure is:
 
@@ -77,8 +77,8 @@ Output is written to `./generated/coarse/` and `./generated/fine/`.
 
 Evaluate the generated restart files at both resolutions. There are separate configs for the coarse (1-degree) and fine (0.25-degree) restart files:
 
-- `gen-setup-100.yaml` — evaluates the coarse restart
-- `gen-setup-025.yaml` — evaluates the fine restart
+- `gen-setup-100.yaml` - evaluates the coarse restart
+- `gen-setup-025.yaml` - evaluates the fine restart
 
 ```bash
 bash evaluate.sh
