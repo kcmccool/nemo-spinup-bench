@@ -73,9 +73,10 @@ This describes the complete end-to-end pipeline to run the benchmark. We omit de
    Download `50.zip` from [Zenodo record 19557419](https://zenodo.org/records/19557419), unzip it, and place the contents in `data/50/`. The record also provides `200.zip` (200 years of DINO output) and `restart.zip` (200 annual restart files) for extended experiments.
 
    ```bash
-   mkdir -p data
+   mkdir -p data/50
    curl -L -o 50.zip https://zenodo.org/records/19557419/files/50.zip
-   unzip 50.zip -d data/
+   unzip 50.zip -d data/50/
+   rm 50.zip
    ```
 
    Or run `bash pipeline/1-download-data.sh`.
