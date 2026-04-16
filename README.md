@@ -1,6 +1,6 @@
 # NEMO Spin-Up Benchmark
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19557419.svg)](https://doi.org/10.5281/zenodo.19557419)
 
 Reproducible research artifact for the NEMO spin-up acceleration method. This repository
 contains the full end-to-end workflow as a citable, versioned snapshot.
@@ -9,11 +9,11 @@ contains the full end-to-end workflow as a citable, versioned snapshot.
 
 ## Repositories
 
-| Submodule | Description |
-|-----------|-------------|
-| [`nemo-spinup-forecast`](nemo-spinup-forecast/) | Dimensionality reduction and forecasting |
-| [`nemo-spinup-restart`](nemo-spinup-restart/) | Restart file generation |
-| [`nemo-spinup-evaluation`](nemo-spinup-evaluation/) | Evaluation and validation |
+| Submodule                                                                     | Description                              |
+| ----------------------------------------------------------------------------- | ---------------------------------------- |
+| [`nemo-spinup-forecast`](https://github.com/m2lines/nemo-spinup-forecast)     | Dimensionality reduction and forecasting |
+| [`nemo-spinup-restart`](https://github.com/m2lines/nemo-spinup-restart)       | Restart file generation                  |
+| [`nemo-spinup-evaluation`](https://github.com/m2lines/nemo-spinup-evaluation) | Evaluation and validation                |
 
 ---
 
@@ -21,83 +21,228 @@ contains the full end-to-end workflow as a citable, versioned snapshot.
 
 Reference data (DINO output, restart files, `mesh_mask.nc`) is archived on Zenodo:
 
-> **Zenodo DOI:** _to be added_
+> **Zenodo DOI:** [10.5281/zenodo.19557419](https://doi.org/10.5281/zenodo.19557419)
 
 ---
 
-## End-to-End Steps for Running Spin-Up NEMO
+## Installation of Nemo-Spinup-Bench dependencies 
+
+This installs all three nemo-spinup-{forecast, restart, evaluation} packages in a single virtual environment. 
 
 1. **Clone this repository with submodules**
 
    ```bash
-   git clone --recurse-submodules git@github.com:m2lines/nemo-spinup-bench.git
+   git clone --recurse-submodules https://github.com/m2lines/nemo-spinup-bench.git
    cd nemo-spinup-bench
    ```
 
-2. **Download reference data from Zenodo**
-
-   ```bash
-   # TODO: add download instructions once Zenodo record is created
-   ```
-
-3. **Create a virtual environment and install dependencies**
+2. **Create a virtual environment and install dependencies**
 
    ```bash
    python3 -m venv venv
    source venv/bin/activate
-   pip install ./nemo-spinup-forecast
-   pip install ./nemo-spinup-restart
-   pip install ./nemo-spinup-evaluation
+   pip install ./nemo-spinup-{forecast,restart,evaluation}
    ```
 
-4. **Resample SSH** from monthly to annual using the notebook in `nemo-spinup-forecast/Notebooks/Resample_ssh.ipynb`.
+
+## Benchmark end-to-end steps
+
+This describes the complete end-to-end pipeline to run the benchmark. We omit details like building and compiling NEMO/DINO.
+
+> The entire pipeline assumes NEMO 4.2.0 and a completed cold-start NEMO run, i.e. output files, restart files, and a `mesh_mask.nc` are available before starting.
+>
+> The commands below assume reference data is downloaded to `data/50/`. Substitute this with your own data directory if not using the reference data.
+
+> Each step below is also available as a standalone script in `pipeline/`, runnable from the bench root:
+> ```bash
+> bash pipeline/1-download-data.sh
+> bash pipeline/2-evaluate-baseline.sh
+> bash pipeline/3-forecast.sh
+> bash pipeline/4-restart.sh
+> bash pipeline/5-evaluate-projected.sh
+> ```
+
+### A. Data preparation
+
+1. **Get simulation data**
+
+   The entire benchmark will run using sample data hosted on Zenodo. Alternatively you may run NEMO/DINO yourself; we recommend running for at least 50–100 years. The Zenodo data contains 50 years of DINO output files to train on. 
+
+   **Download data from Zenodo**
+
+   Download `50.zip` from [Zenodo record 19557419](https://zenodo.org/records/19557419), unzip it, and place the contents in `data/50/`. The record also provides `200.zip` (200 years of DINO output) and `restart.zip` (200 annual restart files) for extended experiments.
+
+   ```bash
+   mkdir -p data/50
+   curl -L -o 50.zip https://zenodo.org/records/19557419/files/50.zip
+   unzip 50.zip -d data/50/
+   rm 50.zip
+   ```
+
+   Or run `bash pipeline/1-download-data.sh`.
+
+2. **(Optional) Combine restart files and mesh mask** using [REBUILD_NEMO](https://forge.nemo-ocean.eu/nemo/nemo/-/tree/4.2.0/tools/REBUILD_NEMO):
+
+   This step is only required if you are using your own NEMO run. The Zenodo reference data already includes combined files. You can use the same module environment used to run NEMO/DINO to compile `rebuild_nemo`.
+
+   ```bash
+   ./rebuild_nemo -n ./nam_rebuild data/50/DINO_00576000_restart 36
+   ./rebuild_nemo -n ./nam_rebuild data/50/mesh_mask 36
+   ```
+
+3. **(Optional) Resample data**
+
+   This step is not required when using the Zenodo reference data, which already contains the resampled file `DINO_1m_to_1y_grid_T.nc`.
+
+   All data must be temporally aligned before forecasting. If you are bringing your own NEMO output, convert monthly SSH to annual using [`cdo`](https://code.mpimet.mpg.de/projects/cdo):
+
+   ```bash
+   cdo yearmean DINO_1m_grid_T.nc DINO_1m_To_1y_grid_T.nc
+   ```
+
+   Temperature and salinity (3-D) are already annual (`DINO_1y_grid_T.nc`).
+
+   If more training data is needed, concatenate monthly outputs `*grid_T.nc` with `ncrcat`, part of the [NCO (netCDF Operators)](https://nco.sourceforge.net/).
+
+---
+
+### B. Spin-up acceleration
+
+The spin-up acceleration pipeline forecasts the ocean state forward in time using dimensionality reduction and Gaussian process regression, generates updated restart files, and evaluates the result against a reference numerical run. We begin with a baseline evaluation of the reference simulation so that the final evaluation can be compared against it.
+
+4. **Establish a baseline evaluation** of the cold-start reference simulation:
+
+   ```bash
+   nemo-spinup-evaluation \
+     --sim-path data/50 \
+     --config configs/DINO-evaluation.yaml \
+     --results-dir evaluation-output \
+     --result-file-prefix baseline \
+     --mode both
+   ```
+
+   Results are written to `evaluation-output/baseline_restart.csv` and `evaluation-output/baseline_grid.csv`.
+
+   Or run `bash pipeline/2-evaluate-baseline.sh`.
 
 5. **Create the projected state**
 
+   The default technique is PCA for dimensionality reduction with Gaussian process regression for forecasting. The key parameters to adjust are `--start` and `--steps`: `--start` controls how many years of spin-up are used for training (here 30 with 20 years thrown away), and `--steps` controls how many years are skipped forward (here 30). Increasing `--steps` gives a larger acceleration but may reduce accuracy.
+
    ```bash
-   python -m nemo_spinup_forecast \
+   nemo-spinup-forecast \
      --ye True \
      --start 20 \
      --end 50 \
      --comp 1 \
      --steps 30 \
-     --path /path/to/reference/data \
-     --ocean-terms nemo-spinup-forecast/ocean_terms.yaml \
-     --techniques-config nemo-spinup-forecast/src/nemo_spinup_forecast/techniques_config.yaml
+     --data-path data/50 \
+     --output-path data/50_projected
    ```
 
-6. **Prepare restart files** using REBUILD\_NEMO:
+   | Argument              | Description                                                                                                                               |
+   | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+   | `--ye`                | Simulation expressed in years (`True`) or months (`False`)                                                                                |
+   | `--start`             | Starting year for training data                                                                                                           |
+   | `--end`               | Ending year (usually the last simulated year)                                                                                             |
+   | `--comp`              | Number or ratio of components to use                                                                                                      |
+   | `--steps`             | Jump size (years if `--ye True`, months otherwise)                                                                                        |
+   | `--data-path`         | Directory containing the simulation files                                                                                                 |
+   | `--output-path`       | Directory to write forecast results to; a timestamped run directory is created under `data/50_projected/runs/` and `data/50_projected/latest` is a symlink to it |
+   | `--ocean-terms`       | Path to `ocean_terms.yaml` mapping logical terms (SSH, Salinity, Temperature) to dataset variable names; uses packaged default if omitted |
+   | `--techniques-config` | Path to `techniques_config.yaml` selecting DR and forecast techniques; uses packaged default if omitted                                   |
+
+   With the example above, the forecast outputs predicted ocean state variables to `data/50_projected/latest/forecast/simu_predicted/`.
+
+   Or run `bash pipeline/3-forecast.sh`.
+
+---
+
+### C. Create the updated restart file
+
+6. **Create the updated restart file**
+
+   Using the forecasted ocean state from the previous step, `nemo-spinup-restart` injects the predicted variables (SSH, temperature, salinity, and derived velocities) into the original NEMO restart file. A new restart file is created with `NEW_` prepended to the filename, leaving the original intact and ready to initialise NEMO at the projected year.
 
    ```bash
-   ./rebuild_nemo -n ./nam_rebuild /path/to/reference/data/restart/DINO_00576000_restart 36
-   ./rebuild_nemo -n ./nam_rebuild /path/to/reference/data/mesh_mask 36
-   ```
+   ln -sf ../50/DINO_00576000_restart.nc data/50_projected/DINO_00576000_restart.nc
 
-7. **Create the updated restart file**
-
-   ```bash
    nemo-spinup-restart \
-     --restart_path /path/to/reference/data/restart/ \
+     --restart_path data/50_projected/ \
      --radical DINO_00576000_restart \
-     --mask_file /path/to/reference/data/mesh_mask.nc \
-     --prediction_path /path/to/forecasts/latest/simu_predicted/ \
-     --ocean_terms nemo-spinup-forecast/ocean_terms.yaml
+     --mask_file data/50/mesh_mask.nc \
+     --prediction_path data/50_projected/latest/forecast/simu_predicted/ \
+     --ocean_terms configs/ocean_terms.DINO.yaml
    ```
 
-8. **Copy the updated restart files** back to the NEMO experiment directory and update
-   `namelist_cfg` (`nn_it000`, `nn_itend`, `cn_ocerst_in`, `ln_rstart = .true.`).
+   The source restart is symlinked into `data/50_projected/` so that `nemo-spinup-restart` reads from and writes the `NEW_` file into the same directory.
 
-9. **Restart DINO** using the updated restart file.
+   - **`--radical`** is the prefix of the restart file (e.g. `DINO_00576000_restart`)
+   - Output files are named as the originals but with `NEW` prepended
 
-10. **Evaluate** the results:
+   Or run `bash pipeline/4-restart.sh`.
 
-    ```bash
-    spinup-eval \
-      --sim-path /path/to/new/simulation \
-      --ref-sim-path /path/to/reference/data \
-      --config nemo-spinup-evaluation/configs/DINO-setup.yaml \
-      --mode both
-    ```
+---
+
+### D. Evaluate the projected restart file
+
+7. **Evaluate the projected restart:**
+
+   ```bash
+   ln -sf ../50/mesh_mask.nc data/50_projected/mesh_mask.nc
+
+   nemo-spinup-evaluation \
+     --sim-path data/50_projected \
+     --config configs/DINO-evaluation.yaml \
+     --results-dir evaluation-output \
+     --result-file-prefix projected \
+     --mode restart
+   ```
+
+   Compare `evaluation-output/projected_restart.csv` against the baseline from step 4 (`evaluation-output/baseline_restart.csv`) to assess the impact of the spin-up acceleration.
+
+   Or run `bash pipeline/5-evaluate-projected.sh`.
+
+---
+
+### E. Running NEMO with the new state
+
+8. **Copy the experiment directory** `EXP00` as a backup; the original will be overwritten in the next step.
+
+9. **Copy the updated restart files** (`NEW_DINO_<time>_restart_<proc_id>.nc`) back to the original experiment directory.
+
+10. **Update `namelist_cfg`** under `namrun`:
+
+   | Parameter      | Description                                    |
+   | -------------- | ---------------------------------------------- |
+   | `nn_it000`     | First timestep (last timestep + 1)             |
+   | `nn_itend`     | Final timestep                                 |
+   | `cn_ocerst_in` | Restart filename (matches latest restart file) |
+   | `ln_rstart`    | `.true.` to start from a restart file          |
+
+11. **Restart DINO** using the updated restart file.
+
+---
+
+## Example Results
+
+Results from running the benchmark with 50 years of DINO data, forecasting 30 years ahead from year 20–50 using PCA + Gaussian process regression (`--start 20 --end 50 --steps 30 --comp 1`).
+
+| Metric | Baseline (50 yr) | Projected | Difference | % Change |
+|---|---|---|---|---|
+| check_density_from_file | 0.000020 | 0.011721 | +0.011701 | — |
+| check_density_computed | 0.000032 | 0.011721 | +0.011689 | — |
+| temperature_500m_30NS (°C) | 11.508 | 11.441 | −0.067 | −0.58% |
+| temperature_BWbox (°C) | 5.197 | 5.203 | +0.005 | +0.10% |
+| temperature_DWbox (°C) | 5.329 | 5.318 | −0.011 | −0.21% |
+| ACC_Drake (Sv) | 188.69 | −102.75 | −291.44 | −154% |
+| ACC_Drake_2 (Sv) | 188.69 | −102.75 | −291.44 | −154% |
+| NASTG_BSF_max (Sv) | 35.52 | 16.81 | −18.70 | −52.7% |
+
+**Observations:**
+- Temperature metrics are well preserved (< 1% change), indicating the scalar field forecast is accurate.
+- Density monotonicity violations increased from near-zero to ~1.2% of grid points.
+- Transport metrics (ACC Drake, NASTG BSF) show large deviations. The geostrophic velocity reconstruction in `nemo-spinup-restart` produces physically unrealistic velocities - this is a known issue under investigation.
 
 ---
 

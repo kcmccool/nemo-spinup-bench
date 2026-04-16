@@ -1,0 +1,6 @@
+# Metric Evaluation
+# Base Directory: /Users/matt/work/nemo/nemo-spinup-bench/data/50_projected
+# Mesh Mask: /Users/matt/work/nemo/nemo-spinup-bench/data/50_projected/mesh_mask.nc
+# Restart File: /Users/matt/work/nemo/nemo-spinup-bench/data/50_projected/DINO_00576000_restart.nc
+#
+metric
