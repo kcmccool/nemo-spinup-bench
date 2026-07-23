@@ -131,17 +131,17 @@ def main(argv=None) -> int:
         TermDef(
             key="ssh",
             term=get_ocean_term("SSH", yaml_path=ocean_terms_path),
-            filename=f"DINO_{run_name}1m_To_1y_grid_T.nc",
+            filename=f"DINO_{run_name}1m_grid_T.nc",
         ),
         TermDef(
             key="soce",
             term=get_ocean_term("Salinity", yaml_path=ocean_terms_path),
-            filename=f"DINO_{run_name}1y_grid_T.nc",
+            filename=f"DINO_{run_name}1m_grid_T.nc",
         ),
         TermDef(
             key="toce",
             term=get_ocean_term("Temperature", yaml_path=ocean_terms_path),
-            filename=f"DINO_{run_name}1y_grid_T.nc",
+            filename=f"DINO_{run_name}1m_grid_T.nc",
         ),
     ]
 
