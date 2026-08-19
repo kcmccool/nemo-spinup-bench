@@ -18,7 +18,9 @@ dependencies = [
     "skforecast>=0.13",
     "dask[array]>=2024.0",
     "PyYAML>=6.0",
-    "torch>=2.2.0"
+    "torch>=2.2.0",
+    "torchdiffeq",
+    
 ]
 
 [project.scripts]

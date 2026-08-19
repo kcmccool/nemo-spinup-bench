@@ -129,20 +129,30 @@ def main(argv=None) -> int:
     run_name = ""  # "kpca_recurGP_2nd_run_"
     specs = [
         TermDef(
-            key="ssh",
-            term=get_ocean_term("SSH", yaml_path=ocean_terms_path),
-            filename=f"DINO_{run_name}1m_grid_T.nc",
+            key="toce",
+            term=get_ocean_term("Temperature", yaml_path=ocean_terms_path),
+            filename=f"DINO_{run_name}1y_grid_T.nc",
         ),
         TermDef(
             key="soce",
             term=get_ocean_term("Salinity", yaml_path=ocean_terms_path),
-            filename=f"DINO_{run_name}1m_grid_T.nc",
+            filename=f"DINO_{run_name}1y_grid_T.nc",
         ),
+        #TermDef(
+        #    key="e3t",
+        #    term=get_ocean_term("VerticalThickness", yaml_path=ocean_terms_path),
+        #    filename=f"DINO_{run_name}1y_grid_T.nc",
+        #),
+        #TermDef(
+        #    key="rhop",
+        #    term=get_ocean_term("PotentialDensity", yaml_path=ocean_terms_path),
+        #    filename=f"DINO_{run_name}1y_grid_T.nc",
+        #),
         TermDef(
-            key="toce",
-            term=get_ocean_term("Temperature", yaml_path=ocean_terms_path),
-            filename=f"DINO_{run_name}1m_grid_T.nc",
-        ),
+             key="ssh",
+             term=get_ocean_term("ssh", yaml_path=ocean_terms_path),
+             filename=f"DINO_{run_name}1y_grid_T.nc",
+                ),
     ]
 
     run_pipeline(

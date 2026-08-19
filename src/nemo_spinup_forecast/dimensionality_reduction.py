@@ -55,11 +55,11 @@ class ConvVAE(nn.Module):
     A foundational Convolutional Variational Autoencoder layout 
     tailored dynamically for structural spatial grid fields.
     """
-    def __init__(self, latent_dim: int, in_channels: int = 1, in_shape: tuple = (64, 64)):
+    def __init__(self, latent_dim: int, in_channels: int = 1, in_shape: tuple = (199, 62)):
         super().__init__()
         self.latent_dim = latent_dim
         self.in_channels = in_channels
-        self.in_shape = in_shape
+        self.in_shape = tuple(in_shape)
         
         # 1. Encoder network block
         self.encoder_conv = nn.Sequential(
@@ -71,7 +71,7 @@ class ConvVAE(nn.Module):
         
         # Track the exact dynamic output shape of the convolutional layers
         with torch.no_grad():
-            dummy_input = torch.zeros(1, in_channels, *in_shape)
+            dummy_input = torch.zeros(1, in_channels, *self.in_shape)
             conv_features = self.encoder_conv(dummy_input)
             _, self.hidden_c, self.hidden_h, self.hidden_w = conv_features.shape
             flat_features = conv_features.numel() // conv_features.shape[0]
@@ -82,10 +82,10 @@ class ConvVAE(nn.Module):
         # 2. Decoder network block
         self.fc_decode = nn.Linear(latent_dim, flat_features)
         
-        # Dynamically set target sizes to guarantee multiplication sanity check matches perfectly
+        # Dynamically set target sizes
         self.unflatten_shape = (self.hidden_c, self.hidden_h, self.hidden_w)
-        
         self.unflatten = nn.Unflatten(dim=1, unflattened_size=self.unflatten_shape)
+        
         self.decoder_conv = nn.Sequential(
             nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, output_padding=1),
             nn.ReLU(),
@@ -97,6 +97,18 @@ class ConvVAE(nn.Module):
         eps = torch.randn_like(std)
         return mu + eps * std
 
+    def decode(self, z):
+        """Decode latent representations and interpolate to exact target spatial grid dimensions."""
+        decoded_flat = self.fc_decode(z)
+        reconstructed = self.decoder_conv(self.unflatten(decoded_flat))
+        
+        # Dynamic alignment guarantees exact spatial match with input grid
+        if reconstructed.shape[-2:] != self.in_shape:
+            reconstructed = nn.functional.interpolate(
+                reconstructed, size=self.in_shape, mode='bilinear', align_corners=False
+            )
+        return reconstructed
+
     def forward(self, x):
         features = self.encoder_conv(x)
         flat_enc = features.view(features.size(0), -1)
@@ -105,13 +117,7 @@ class ConvVAE(nn.Module):
         logvar = self.fc_logvar(flat_enc)
         z = self.reparameterize(mu, logvar)
         
-        decoded_flat = self.fc_decode(z)
-        reconstructed = self.decoder_conv(self.unflatten(decoded_flat))
-        
-        # Optional: crop/pad output if ConvTranspose introduces dimensional rounding drift vs raw input
-        if reconstructed.shape[-2:] != x.shape[-2:]:
-            reconstructed = nn.functional.interpolate(reconstructed, size=x.shape[-2:], mode='bilinear', align_corners=False)
-            
+        reconstructed = self.decode(z)
         return reconstructed, mu, logvar
 
 
@@ -146,7 +152,6 @@ class DimensionalityReductionCVAE:
     def vae_loss_function(self, recon_x, x, mu, logvar):
         """Computes reconstruction loss (MSE) and balances it against 
         the Kullback-Leibler Divergence regularizer."""
-        # Fixed capitalization from nn.Functional to nn.functional
         recon_loss = nn.functional.mse_loss(recon_x, x, reduction='mean')
         kl_element = 1 + logvar - mu.pow(2) - logvar.exp()
         kl_loss = -0.5 * torch.mean(torch.sum(kl_element, dim=1))
@@ -157,7 +162,7 @@ class DimensionalityReductionCVAE:
         """Train the VAE on the historical sequence and extract structural components."""
         array = np.copy(simulation_array[:length])
         
-        # Capture 3D structural fields: (Depth_Channels, Y, X)
+        # Capture structural fields: (Depth, Y, X) or (Y, X)
         self.shape = array.shape[1:] 
         in_channels = self.shape[0] if len(self.shape) == 3 else 1
         spatial_shape = self.shape[-2:]
@@ -213,38 +218,31 @@ class DimensionalityReductionCVAE:
 
     def reconstruct_predictions(self, predictions, n, info, begin=0):
         """Pass-through configuration to route baseline pipeline calls to CVAE space."""
-        # Cleanly convert incoming prediction matrix to NumPy array whether it arrives as a DataFrame or Array
         if isinstance(predictions, pd.DataFrame):
             forecast_scores = predictions.iloc[begin:, :n].to_numpy()
         else:
             forecast_scores = np.asarray(predictions)[begin:, :n]
             
-        # Reconstruct fields from the sliced forecast scores Matrix
         reconstructed_data = self.reconstruct_components(n=n, custom_scores=forecast_scores)
         
-        # Build standard int_mask pattern to remain consistent with simulation ecosystem expects
         mask_source = info["mask"] if (info is not None and "mask" in info) else self.bool_mask
         int_mask = mask_source.astype(np.int32).reshape(self.shape)
         
-        # Extract scaling statistics securely
         desc_stats = info["desc"] if (info is not None and "desc" in info) else self.desc
-        
         if desc_stats and "std" in desc_stats:
             reconstructed_data = reconstructed_data * 2 * desc_stats["std"] + desc_stats["mean"]
             
         return int_mask, reconstructed_data
 
     def reconstruct_components(self, n: int, custom_scores=None):
-        """Pass structural parameters back through the decoder to evaluate structural tracking."""
+        """Pass structural parameters back through decoder and restore ocean mask."""
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
-        # Fall back to internal trained components if custom forecast scores are not supplied
         if custom_scores is not None:
             latent_scores = np.copy(custom_scores)
         else:
             latent_scores = np.copy(self.components[:, :n])
             
-        # If the number of components requested is less than model capacity, pad with zeros
         if n < self.comp:
             padding = np.zeros((len(latent_scores), self.comp - n))
             latent_scores = np.hstack([latent_scores, padding])
@@ -252,31 +250,20 @@ class DimensionalityReductionCVAE:
         latent_tensor = torch.tensor(latent_scores, dtype=torch.float32).to(device)
         self.model.eval()
         with torch.no_grad():
-            reconstructed = self.model.decoder_conv(self.model.unflatten(self.model.fc_decode(latent_tensor)))
-            reconstructed = reconstructed.cpu().numpy()
+            # Uses decode() to guarantee exact spatial grid dimensions
+            reconstructed = self.model.decode(latent_tensor).cpu().numpy()
             
-        # 1. Remove the singleton channel dimension if present from the decoder output
-        if reconstructed.shape[1] == 1:
+        # 1. Remove the channel dimension if single-channel 2D data
+        if reconstructed.shape[1] == 1 and len(self.shape) == 2:
             reconstructed = np.squeeze(reconstructed, axis=1)
             
-        # 2. Extract target spatial dimensions from the domain mask
-        if len(self.bool_mask.shape) == 3:
-            _, target_lat, target_lon = self.bool_mask.shape
-        else:
-            target_lat, target_lon = self.bool_mask.shape[-2:]
-            
-        # 3. Slice out convolutional layer padding to align dimensions (e.g., 52 -> 50)
-        if reconstructed.shape[-2] != target_lat or reconstructed.shape[-1] != target_lon:
-            reconstructed = reconstructed[..., :target_lat, :target_lon]
-            
-        # 4. Ensure the mask has the correct dimensions for robust time-series broadcasting
+        # 2. Expand mask for broadcasting across time/depth dimensions
         mask_expanded = self.bool_mask[None, ...] if len(self.bool_mask.shape) == 2 else self.bool_mask
         if len(reconstructed.shape) > len(mask_expanded.shape):
             mask_expanded = mask_expanded[None, ...]
             
-        # 5. Foolproof broadcasting: wherever the mask is False, force NaN.
+        # 3. Restore land NaNs
         reconstructed = np.where(mask_expanded, reconstructed, np.nan)
-            
         return reconstructed
 
     def get_component(self, n):
@@ -289,10 +276,9 @@ class DimensionalityReductionCVAE:
         latent_tensor = torch.tensor(latent_vector, dtype=torch.float32).to(device)
         self.model.eval()
         with torch.no_grad():
-            component_map = self.model.decoder_conv(self.model.unflatten(self.model.fc_decode(latent_tensor)))
-            component_map = component_map.cpu().numpy()[0]
+            component_map = self.model.decode(latent_tensor).cpu().numpy()[0]
             
-        if component_map.shape[0] == 1:
+        if component_map.shape[0] == 1 and len(self.shape) == 2:
             component_map = np.squeeze(component_map, axis=0)
             
         component_map[~self.bool_mask] = np.nan
@@ -308,35 +294,33 @@ class DimensionalityReductionCVAE:
         if truth is None:
             raise ValueError("Base target simulation data matrix is missing or unassigned.")
             
-            # Undo standardization on BOTH reconstruction AND truth so scales match
-            # 
         if self.desc and "std" in self.desc:
             reconstruction = reconstruction * 2 * self.desc["std"] + self.desc["mean"]
+            
         if hasattr(truth, 'values'):
             truth = truth.values
-        
-        truth = truth * 2 * self.desc["std"] + self.desc["mean"]
-        
+            
+        if self.desc and "std" in self.desc:
+            truth = truth * 2 * self.desc["std"] + self.desc["mean"]
+            
         if len(np.shape(truth)) == 3:
             valid_count = np.count_nonzero(~np.isnan(truth[0]))
             rmse_values = np.sqrt(np.nansum((truth - reconstruction) ** 2, axis=(1, 2)) / valid_count)
             rmse_map = np.sqrt(np.nansum((truth - reconstruction) ** 2, axis=0) / self.len)
-        
         else:
             valid_count = np.count_nonzero(~np.isnan(truth[0]), axis=(1, 2))
             rmse_values = np.nansum((truth - reconstruction) ** 2, axis=(2, 3))
-            
             for i in range(len(valid_count)):
                 rmse_values[:, i] = rmse_values[:, i] / valid_count[i]
             rmse_values = np.sqrt(rmse_values)
-            rmse_map = np.sqrt(np.sum((truth - reconstruction) ** 2, axis=0) / self.len)
+            rmse_map = np.sqrt(np.nansum((truth - reconstruction) ** 2, axis=0) / self.len)
         
         return reconstruction, rmse_values, rmse_map
 
     def save_weights(self, base_path: str):
         """Save the PyTorch state dict securely to its dedicated weight file."""
         if os.path.isdir(base_path):
-             weight_path = os.path.join(base_path, "vae_weights.pt")
+            weight_path = os.path.join(base_path, "vae_weights.pt")
         else:
             clean_path = base_path.replace(".npz", "").replace("_weights.pt", "").replace(".pkl", "")
             dirname, basename = os.path.split(clean_path)
@@ -352,8 +336,15 @@ class DimensionalityReductionCVAE:
         """Re-instantiates the network block and maps the extracted state dictionary."""
         if in_channels is None:
             in_channels = self.shape[0] if (self.shape and len(self.shape) == 3) else 1
+            
         if spatial_shape is None:
-            spatial_shape = self.shape[-2:] if self.shape else (64, 64)
+            if self.shape is not None:
+                spatial_shape = self.shape[-2:]
+            else:
+                raise ValueError(
+                    "[CVAE] Cannot initialize ConvVAE: 'spatial_shape' is None and 'self.shape' is unassigned. "
+                    "Please provide 'spatial_shape=(height, width)' explicitly."
+                )
             
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = ConvVAE(latent_dim=self.comp, in_channels=in_channels, in_shape=spatial_shape).to(device)
@@ -366,6 +357,7 @@ class DimensionalityReductionCVAE:
             if basename.startswith("pca_"):
                 basename = basename[4:]
             weight_path = os.path.join(dirname, f"{basename}_vae_weights.pt")
+            
         try:
             self.model.load_state_dict(torch.load(weight_path, map_location=device))
             self.model.eval()
@@ -389,7 +381,7 @@ class DimensionalityReductionCVAE:
         """Restores class state after pickle extraction."""
         self.__dict__.update(state)
         self.model = None
- 
+
 class DimensionalityReductionPCA(DimensionalityReduction):
     """Dimensionality reduction using classical Principal Component Analysis (PCA).
 

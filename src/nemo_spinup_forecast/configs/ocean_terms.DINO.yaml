@@ -1,4 +1,6 @@
 Terms:
-  Salinity: sss
-  Temperature: sst
-  SSH: ssh
+  Salinity: soce
+  Temperature: toce
+ # VerticalThickness: e3t
+  #PotentialDensity: rhop
+  ssh: ssh

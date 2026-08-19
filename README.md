@@ -18,7 +18,18 @@ This project provides a flexible framework for oceanographic time‑series forec
 
    ```bash
    python3 -m venv venv
-   source venv/bin/activate
+       ```bash
+    python -m nemo_spinup_forecast \
+      --ye True \
+      --start 20 \
+      --end 50 \
+      --comp 1 \
+      --steps 30 \
+      --data-path /path/to/simulation/files \
+      --output-path /path/to/output \
+      --ocean-terms /path/to/ocean
+      --techniques-config /path/to/techniques_config.yaml
+    ```
    ```
 3. **Install dependencies**
 

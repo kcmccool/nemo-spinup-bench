@@ -10,6 +10,7 @@ import sys
 import warnings
 
 import matplotlib.pyplot as plt
+import torch
 import inspect
 import numpy as np
 import pandas as pd
