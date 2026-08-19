@@ -1,0 +1,12 @@
+# Metric Evaluation
+# Base Directory: /Users/matt/work/nemo/nemo-spinup-bench/data/50
+# Mesh Mask: /Users/matt/work/nemo/nemo-spinup-bench/data/50/mesh_mask.nc
+# Restart File: /Users/matt/work/nemo/nemo-spinup-bench/data/50/DINO_00576000_restart.nc
+# Output Files:
+#   - /Users/matt/work/nemo/nemo-spinup-bench/data/50/DINO_1y_grid_T.nc
+#   - /Users/matt/work/nemo/nemo-spinup-bench/data/50/DINO_1m_To_1y_grid_T.nc
+#   - /Users/matt/work/nemo/nemo-spinup-bench/data/50/DINO_1y_grid_U.nc
+#   - /Users/matt/work/nemo/nemo-spinup-bench/data/50/DINO_1y_grid_V.nc
+#
+timestamp,check_density_from_file,check_density_computed,temperature_500m_30NS_metric,temperature_BWbox_metric,temperature_DWbox_metric,ACC_Drake_metric,ACC_Drake_metric_2,NASTG_BSF_max
+576000.0,0.000020,0.000032,11.507896,5.197274,5.329099,188.689106,188.689106,35.515781
