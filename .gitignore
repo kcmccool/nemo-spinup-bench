@@ -1,0 +1,13 @@
+
+# Forecast outputs & generated data
+1800/
+200/
+output/
+*.png
+*.out
+2026-*/
+
+# Python build & packaging artifacts
+build/
+*.egg-info/
+__pycache__/

@@ -1,10 +1,6 @@
-terms:
-  salinity:
-    filename: DINO_1y_grid_T.nc
-    term: soce
-  temperature:
-    filename: DINO_1y_grid_T.nc
-    term: toce
-  ssh:
-    filename: DINO_1m_To_1y_grid_T.nc
-    term: ssh
+Terms:
+  Salinity: soce
+  Temperature: toce
+ # VerticalThickness: e3t
+  #PotentialDensity: rhop
+  ssh: ssh

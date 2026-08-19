@@ -10,6 +10,8 @@ import sys
 import warnings
 
 import matplotlib.pyplot as plt
+import torch
+import inspect
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -44,12 +46,18 @@ def load_ts(file_path, var):
             the simu (pca, mean, std, time_dim)...
     """
     dico = np.load(file_path + f"/{var}.npz", allow_pickle=True)
+    full_path= file_path + f"/{var}.npz"
     dico = {key: dico[key] for key in dico}
     df = pd.DataFrame(
         dico["ts"], columns=[f"{var}-{i + 1}" for i in range(np.shape(dico["ts"])[1])]
     )
-    with open(file_path + f"/pca_{var}", "rb") as fp:
-        dico["pca"] = pickle.load(fp)  # noqa: S301
+    try:
+        with open(file_path + f"/pca_{var}", "rb") as fp:
+            dico["pca"] = pickle.load(fp)  # noqa: S301
+    except (pickle.UnpicklingError, AttributeError, ImportError, ModuleNotFoundError):
+        #Fallback: If it is a ConvVAE PyTorch file, pickle loading will fail or lack context
+        #Pass raw path strung down so DR technique class can safely execute torch.load() later on
+        dico["pca"]= full_path
     return df, dico
 
 
@@ -332,6 +340,8 @@ class Simulation:
 
     def decompose(self):
         """Apply Principal Component Analysis (PCA) to the simulation data."""
+        print("DEBUG: Class File Path ->", inspect.getfile(self.dimensionality_reduction.__class__))
+        print("DEBUG: Available Methods ->", dir(self.dimensionality_reduction))
         self.dimensionality_reduction.set_from_simulation(self)
 
         self.components, self.pca, self.bool_mask = (
@@ -356,15 +366,17 @@ class Simulation:
 
         return map_
 
-    def get_num_components(self):
-        """Get the number of components used in the dimensionality reduction.
-
-        Returns
-        -------
-        int
-            Number of components.
-        """
-        return self.dimensionality_reduction.get_num_components()
+    def get_num_components(self) -> int:
+        """Get the number of latent components used in dimensionality reduction."""
+        if hasattr(self.dimensionality_reduction, "get_num_components"):
+            return self.dimensionality_reduction.get_num_components()
+        # Fallback for CVAE/CAE tracking attributes
+        if hasattr(self.dimensionality_reduction, "comp"):
+            return self.dimensionality_reduction.comp
+        raise AttributeError(
+            f"The dimensionality reduction object {type(self.dimensionality_reduction).__name__} "
+            "does not specify a component counting mechanism."
+        )
 
     ###################
     #   Reconstruct   #
@@ -452,8 +464,21 @@ class Simulation:
         simu_dico = self.make_dico()
         if not os.path.exists(file_path):  # save infos
             os.makedirs(file_path)
-        with open(f"{file_path}/{term}/pca_{term}", "wb") as f:
-            pickle.dump(self.pca, f)
+            
+        # --- FIXED BLOCK ---
+        # Separate file creation to avoid leaving a 0-byte ghost file for Neural nets
+        if hasattr(self.dimensionality_reduction, "save_weights"):
+            # Write a simple placeholder text to the file so pickle.load doesn't throw EOFError
+            placeholder_path = f"{file_path}/{term}/pca_{term}"
+            with open(placeholder_path, "w") as f:
+                f.write("CVAE_FALLBACK_STRING")
+            
+            # Save actual framework tensor weights 
+            self.dimensionality_reduction.save_weights(f"{file_path}/{term}/pca_{term}")
+        else:
+            with open(f"{file_path}/{term}/pca_{term}", "wb") as f:
+                pickle.dump(self.pca, f)
+                
         np.savez(f"{file_path}/{term}/{term}", **simu_dico)
 
 
@@ -484,32 +509,53 @@ class Predictions:
         dr_technique=None,
         w=12,
     ):
-        """
-        Initialize the Predictions object.
-
-        Parameters
-        ----------
-        var : str
-            The variable name.
-        data : pandas.DataFrame, optional
-            The time series data.
-        info : dict, optional
-            Additional information.
-        forecast_technique : object, optional
-            The Gaussian Process regressor.
-        dr_technique : object, optional
-            Dimensionality reduction technique instance.
-        w : int, optional
-            Width for moving average and metrics calculation.
-        """
+        """Initialize the Predictions object."""
         self.var = var
         self.forecaster = forecast_technique
         self.dr_technique = dr_technique
         self.w = w
         self.data = data
         self.info = info
-        self.info["desc"] = self.info["desc"].item()
-        self.len_ = len(self.data)
+        
+        if self.info and "desc" in self.info and hasattr(self.info["desc"], "item"):
+            self.info["desc"] = self.info["desc"].item()
+            
+        self.len_ = len(self.data) if self.data is not None else 0
+        
+        # --- Fixed Indentation Block ---
+        if self.dr_technique is not None:
+            if isinstance(self.info.get("pca"), str):
+                # 1. Instantiate the dynamic model layer architecture if not already built
+                if getattr(self.dr_technique, "model", None) is None:
+                    # Dynamically determine the spatial shape channels and dims
+                    spatial_shape = self.info["shape"][-2:]
+                    in_channels = self.info["shape"][0] if len(self.info["shape"]) == 3 else 1
+                    
+                    # Assuming ConvVAE is imported in this file context
+                    from nemo_spinup_forecast.dimensionality_reduction import ConvVAE
+                    self.dr_technique.model = ConvVAE(
+                        latent_dim=self.dr_technique.comp, 
+                        in_channels=in_channels,
+                        in_shape=spatial_shape
+                    )
+                
+                # 2. Safely call your loading method
+                if hasattr(self.dr_technique, "load_weights"):
+                    self.dr_technique.load_weights(
+                        base_path=self.info["pca"],
+                        in_channels=self.dr_technique.model.in_channels,
+                        spatial_shape=self.dr_technique.model.in_shape
+                    )
+                else:
+                    # Fallback direct torch loading
+                    model_path = self.info["pca"].replace(".npz", "").replace("_weights.pt", "") + "_vae_weights.pt"
+                    self.dr_technique.model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+                    
+                # 3. CRITICAL: Replace the string path with the actual loaded model instance
+                self.info["pca"] = self.dr_technique.model
+            else:
+                self.dr_technique.pca = self.info.get("pca")
+
 
     def __len__(self):
         return len(self.data)

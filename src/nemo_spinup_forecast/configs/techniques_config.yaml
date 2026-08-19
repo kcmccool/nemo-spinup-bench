@@ -1,4 +1,10 @@
 DR_technique:
+  #name: PCA
   name: PCA
+  cvae:
+    comp: 24       # Number of latent dimensions (analogous to PCA components)
+    epochs: 40       # Number of training epochs on the spin-up sequence
+    batch_size: 16   # Training batch size for the PyTorch DataLoader
+    lr: 0.001
 Forecast_technique:
   name: GaussianProcessForecaster

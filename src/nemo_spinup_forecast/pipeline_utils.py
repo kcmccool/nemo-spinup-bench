@@ -136,35 +136,39 @@ def compute_rmse_for_terms(
     sims: Mapping[str, Simulation],
     n_components: int | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    """Compute reconstruction error outputs for each configured term.
-
-    Parameters
-    ----------
-    specs : Sequence[TermDef]
-        Term specifications defining the processing order and output keys.
-    sims : Mapping[str, Simulation]
-        Prepared and decomposed simulations keyed by :attr:`TermDef.key`.
-    n_components : int or None, default=None
-        Number of components to use for reconstruction.
-        None uses all fitted components (``len(s.pca.components_)``).
-
-    Returns
-    -------
-    tuple[dict[str, Any], dict[str, Any], dict[str, Any]]
-        Tuple ``(recs, rmseVs, rmseMs)`` where each dictionary is keyed by
-        :attr:`TermDef.key`.
-    """
+    
     recs: dict[str, Any] = {}
     rmseVs: dict[str, Any] = {}
     rmseMs: dict[str, Any] = {}
+    
     for spec in specs:
         s = sims[spec.key]
+        dr = s.dimensionality_reduction
         n = n_components if n_components is not None else len(s.pca.components_)
-        rec, rmseV, rmseM = s.error(n)
+        
+        # 1. Get raw standardized reconstruction and truth
+        rec_std = dr.reconstruct_components(n=n)
+        truth_std = s.simulation
+        desc = getattr(s, "desc", None)
+        
+        # 2. Un-standardize both to physical units
+        if desc and "std" in desc:
+            rec = rec_std * 2 * desc["std"] + desc["mean"]
+            truth = truth_std * 2 * desc["std"] + desc["mean"]
+        else:
+            rec = rec_std
+            truth = truth_std
+            
+        # 3. Compute RMSE
+        valid_count = np.count_nonzero(~np.isnan(truth[0]))
+        rmseV = np.sqrt(np.nansum((truth - rec) ** 2, axis=(1, 2)) / valid_count)
+        rmseM = np.sqrt(np.nansum((truth - rec) ** 2, axis=0) / len(truth))
+        
         recs[spec.key] = rec
         rmseVs[spec.key] = rmseV
         rmseMs[spec.key] = rmseM
         print(f"RMSE computed for {spec.key}")
+        
     return recs, rmseVs, rmseMs
 
 
@@ -233,35 +237,21 @@ def build_predictions(
     forecast_method: Any,
     dr_method: Any,
 ) -> dict[str, Predictions]:
-    """Construct prediction objects for each configured term.
-
-    Parameters
-    ----------
-    specs : Sequence[TermDef]
-        Term specifications defining output keys and forecasted variables.
-    dfs : Mapping[str, pd.DataFrame]
-        Time-series component DataFrames keyed by :attr:`TermDef.key`.
-    infos : Mapping[str, dict[str, Any]]
-        Metadata dictionaries keyed by :attr:`TermDef.key`.
-    forecast_method : Any
-        Forecasting method instance passed to
-        :class:`~nemo_spinup_forecast.forecast.Predictions`.
-    dr_method : Any
-        Dimensionality-reduction method passed to
-        :class:`~nemo_spinup_forecast.forecast.Predictions`.
-
-    Returns
-    -------
-    dict[str, Predictions]
-        Prediction objects keyed by :attr:`TermDef.key`.
-    """
+    """Construct prediction objects for each configured term."""
     preds: dict[str, Predictions] = {}
     for spec in specs:
+        # --- FIX: If dr_method is passed as an uninstantiated class type, instantiate it dynamically ---
+        if isinstance(dr_method, type):
+            # Extract latent component count safely from the columns of the decomposed DataFrame
+            latent_components = len(dfs[spec.key].columns)
+            dr_instance = dr_method(comp=latent_components)
+        else:
+            dr_instance = dr_method
+
         preds[spec.key] = Predictions(
-            spec.term, dfs[spec.key], infos[spec.key], forecast_method, dr_method
+            spec.term, dfs[spec.key], infos[spec.key], forecast_method, dr_instance
         )
     return preds
-
 
 def forecast_all(
     specs: Sequence[TermDef],
