@@ -1,6 +1,6 @@
 [submodule "nemo-spinup-forecast"]
 	path = nemo-spinup-forecast
-	url = https://github.com/m2lines/nemo-spinup-forecast.git
+	url = https://github.com/kcmccool/nemo-spinup-bench.git
 [submodule "nemo-spinup-evaluation"]
 	path = nemo-spinup-evaluation
 	url = https://github.com/m2lines/nemo-spinup-evaluation.git
