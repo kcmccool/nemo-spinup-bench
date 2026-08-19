@@ -11,3 +11,15 @@ output/
 build/
 *.egg-info/
 __pycache__/
+.vscode/
+*.docx
+*.lnk
+DINO-Fusion/
+SAMUDRA_Reference/
+Zenodo Data/
+check_grid.py
+configs/ocean_terms.DINO copy.yaml
+differentiable-programming-summer-school-2026/
+forecast_output_scenario_A/
+rse-skills-workshop/
+testing-workshop/
