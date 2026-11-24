@@ -6,5 +6,5 @@
 	url = https://github.com/m2lines/nemo-spinup-restart.git
 [submodule "nemo-spinup-forecast"]
 	path = nemo-spinup-forecast
-	url = https://github.com/kcmccool/nemo-spinup-bench_cloned.git
+	url = https://github.com/kcmccool/nemo-spinup-forecast.git
 	branch = main
